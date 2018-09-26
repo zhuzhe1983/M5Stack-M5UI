@@ -1,4 +1,4 @@
-import os
+import uos
 import sys
 import time
 from m5stack import lcd, buttonA, buttonB, buttonC
@@ -7,33 +7,17 @@ import time
 import _thread
 
 # Files in sysPy will not be shown in app list
-sysPy = set(['main.py', 'boot.py', 'cache.py'])
+fsys = set(['main.py', 'boot.py', 'cache.py'])
 
-flag_isHalt = False
+PATH_CACHE = '/flash/cache.py'
+FLAG_FOREGROUND = True
 
 def eventCls():
 	pass
 
 def flushCache():
-	with open('cache.py', 'w') as o:
+	with open(PATH_CACHE, 'w') as o:
 		o.write('')
-
-def pyRun(fname):
-	buttonA.wasPressed(eventCls)
-	buttonB.wasPressed(eventCls)
-	buttonC.wasPressed(eventCls)
-	lcd.println('Now loading...')
-	with open(fname, 'r') as o:
-		code = o.read()
-	with open('cache.py', 'w') as o:
-		o.write(code)
-	if 'cache' in sys.modules.keys():
-		del sys.modules['cache']
-	lcd.clear()
-	import cache
-	cache.main()
-	welcome()
-
 
 def styleInit():
 	lcd.setColor(lcd.WHITE)
@@ -47,7 +31,7 @@ def sysInit():
 		lcd.print('Cannot mount SD card!')
 
 
-class IconPainter:
+class UIPainter:
 	def __init__(self):
 		pass
 
@@ -60,6 +44,13 @@ class IconPainter:
 	def text(self, x, y, txt, color=lcd.WHITE):
 		lcd.setCursor(x, y)
 		lcd.print(txt)
+
+	def alert(self, text):
+		lcd.rect(0, 0, 320, 240, lcd.DARKGREY, lcd.DARKGREY)
+		lcd.println(text, lcd.CENTER, color=lcd.RED)
+		lcd.println('Long press \"A\" to exit', lcd.CENTER, color=lcd.BLACK)
+		while not buttonA.isPressed():
+			time.sleep(1)
 
 class Framework():
 	def __init__(self, title):
@@ -82,21 +73,29 @@ class Framework():
 				return 2
 
 	def sdStatus(self):
-		import uos
 		if 'sd' in uos.listdir('/'):
 			return 1
 		else:
 			return 0
 
+	def ftpStatus(self):
+		status = network.ftp.status()
+		if status[0] == -1:
+			return 0
+		else:
+			return 1
+
 	def __th_statusMonitor(self):
-		ip = IconPainter()
-		while (flag_isHalt == False):
+		ip = UIPainter()
+		while (FLAG_FOREGROUND):
 			if self.wifiStatus() == 1:
 				ip.wifi(0, 2, 20, lcd.DARKGREY)
 			elif self.wifiStatus() == 2:
 				ip.wifi(0, 2, 20)
 			if self.sdStatus():
 				ip.text(30, 5, 'SD')
+			if self.ftpStatus():
+				ip.text(60, 5, 'FTP')
 			time.sleep(1)
 
 	def drawFrame(self):
@@ -120,6 +119,7 @@ class Menu():
 		self.currentPage = 1
 		self.upleft = (0, 24)
 		self.downright = (320, 204)
+		self.__drawBackground()
 		
 	def pressUp(self):
 		if self.index > 0:
@@ -135,17 +135,23 @@ class Menu():
 			self.index = 0
 		self.update()
 
-	def update(self):
+	def __drawBackground(self):
 		lcd.rect(self.upleft[0],
 			self.upleft[1],
 			self.downright[0]-self.upleft[0],
 			self.downright[1]-self.upleft[1],
 			lcd.BLACK,
 			lcd.BLACK)
+
+	def update(self):
 		lcd.setCursor(self.upleft[0]+1, self.upleft[1]+1)
 
 		cp = int(self.index / self.MIOP) + 1	# Current page
-		sru = (cp - 1) * self.MIOP + (cp - 1)
+		if self.currentPage != cp:
+			self.currentPage = cp
+			self.__drawBackground()
+
+		sru = (cp - 1) * self.MIOP# + (cp - 1)
 		if len(self.selections) - sru >= self.MIOP:
 			srd = sru + self.MIOP
 		else:
@@ -156,40 +162,72 @@ class Menu():
 			else:
 				lcd.println(self.selections[i], color=lcd.WHITE)
 
-class PyList(Menu):
-	def execute(self):
-		global flag_isHalt
-		flag_isHalt = True
-		pyRun(self.selections[self.index])
-
-# class FileList:
-# 	def __init__(self):
-# 		self.files = list(filter(lambda x: x[-3:] == '.py', os.listdir()))
-
+# class PyList(Menu):
 # 	def execute(self):
+# 		global flag_isHalt
+# 		flag_isHalt = True
 # 		pyRun(self.selections[self.index])
 
+class FileList(Menu):
+	def __init__(self, root):
+		# self.root = root
+		files = list(set(uos.listdir(root)) - fsys)
+		if uos.getcwd() != '/':
+			# files.insert(0, '/'.join(uos.getcwd().split('/')[:-1]))
+			files.insert(0, '/')
+		uos.chdir(root)
+		super().__init__(files)
 
-def welcome():
-	global flag_isHalt
-	flag_isHalt = False
+	def pyRun(self, fname):
+		global FLAG_FOREGROUND
+		FLAG_FOREGROUND = False
+		buttonA.wasPressed(eventCls)
+		buttonB.wasPressed(eventCls)
+		buttonC.wasPressed(eventCls)
+		lcd.setCursor(self.upleft[0]+1, self.upleft[1]+1)
+		lcd.println('Now loading...')
+		with open(fname, 'r') as o:
+			code = o.read()
+		with open(PATH_CACHE, 'w') as o:
+			o.write(code)
+		if 'cache' in sys.modules.keys():
+			del sys.modules['cache']
+		lcd.clear()
+		import cache
+		cache.main()
+
+	def fileSelected(self):
+		try:
+			uos.chdir(self.selections[self.index])
+			self.selections = list(set(uos.listdir()) - fsys)
+			if uos.getcwd() != '/':
+				# self.selections.insert(0, '/' + '/'.join(uos.getcwd().split('/')[:-1]))
+				self.selections.insert(0, '/')
+			self.index = 0
+			self.__drawBackground()
+			self.update()
+		except:
+			if self.selections[self.index][-3:] == '.py':
+				self.pyRun(self.selections[self.index])
+				welcome(uos.getcwd())
+
+def welcome(root):
+	global FLAG_FOREGROUND
+	FLAG_FOREGROUND = True
 	lcd.clear()
 	styleInit()
 	fw = Framework('M5UI')
 	fw.drawFrame()
-	execLst = list(filter(lambda x: x[-3:] == '.py', os.listdir()))
-	execLst = list(set(execLst) - sysPy)
-	frontpage = PyList(execLst)
+	frontpage = FileList(root)
 	frontpage.update()
 	buttonA.wasPressed(frontpage.pressUp)
 	buttonB.wasPressed(frontpage.pressDown)
-	buttonC.wasPressed(frontpage.execute)
+	buttonC.wasPressed(frontpage.fileSelected)
 
 def main():
 	flushCache()
 	sysInit()
-	welcome()
-
+	welcome('/')
 
 if __name__ == '__main__':
 	main()

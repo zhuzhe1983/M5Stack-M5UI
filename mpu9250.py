@@ -4,14 +4,18 @@ def main():
     from time import sleep_ms
     from machine import I2C
 
+    
+	# lcd.font(lcd.FONT_Small, transparent=True, fixedwidth=False)
+
     try:
         i2c = I2C(sda = 21, scl = 22)
-        lcd.println('I2C port has been used.')
+        # lcd.println('I2C port has been used.')
         
         imu = MPU9250(i2c)
 
         lcd.clear()
-        lcd.font(lcd.FONT_Small)
+        lcd.setColor(lcd.WHITE)
+        lcd.font(lcd.FONT_Small, transparent=False)
 
         while not buttonA.isPressed():
             accel = imu.acceleration

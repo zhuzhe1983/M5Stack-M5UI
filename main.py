@@ -9,7 +9,7 @@ import _thread
 # Files in sysPy will not be shown in app list
 fsys = set(['main.py', 'boot.py', 'cache.py'])
 
-PATH_CACHE = '/flash/cache.py'
+PATH_CACHE = './cache.py'
 FLAG_FOREGROUND = True
 
 def eventCls():
@@ -78,12 +78,12 @@ class Framework():
 		else:
 			return 0
 
-	def ftpStatus(self):
-		status = network.ftp.status()
-		if status[0] == -1:
-			return 0
-		else:
-			return 1
+	# def ftpStatus(self):
+	# 	status = network.ftp.status()
+	# 	if status[0] == -1:
+	# 		return 0
+	# 	else:
+	# 		return 1
 
 	def __th_statusMonitor(self):
 		ip = UIPainter()
@@ -94,8 +94,8 @@ class Framework():
 				ip.wifi(0, 2, 20)
 			if self.sdStatus():
 				ip.text(30, 5, 'SD')
-			if self.ftpStatus():
-				ip.text(60, 5, 'FTP')
+			# if self.ftpStatus():
+			# 	ip.text(60, 5, 'FTP')
 			time.sleep(1)
 
 	def drawFrame(self):
@@ -114,26 +114,30 @@ class Framework():
 class Menu():
 	def __init__(self, selections):
 		self.selections = selections
-		self.index = 0
+		self.index = 0					# Initial choice
 		self.MIOP = 11					# Max Index in One Page
 		self.currentPage = 1
 		self.upleft = (0, 24)
 		self.downright = (320, 204)
-		self.__drawBackground()
+		# self.__drawBackground()
+		self.refresh(selections)
+		buttonA.wasPressed(self.pressUp)
+		buttonB.wasPressed(self.pressDown)
+		buttonC.wasPressed(self.fileSelected)
 		
 	def pressUp(self):
 		if self.index > 0:
 			self.index -= 1
 		else:
 			self.index = len(self.selections) - 1
-		self.update()
+		self.__guiUpdate()
 
 	def pressDown(self):
 		if self.index < len(self.selections):
 			self.index += 1
 		else:
 			self.index = 0
-		self.update()
+		self.__guiUpdate()
 
 	def __drawBackground(self):
 		lcd.rect(self.upleft[0],
@@ -143,15 +147,32 @@ class Menu():
 			lcd.BLACK,
 			lcd.BLACK)
 
-	def update(self):
+	def __drawNaviBar(self, currentPage):
+		h_bar = self.downright[1]-self.upleft[1]
+		h_lever = int(h_bar / int(len(self.selections) / self.MIOP + 1))
+		lcd.rect(308,
+			self.upleft[1],
+			self.downright[0]-self.upleft[0],
+			h_bar,
+			lcd.WHITE,
+			lcd.WHITE)
+		lcd.rect(308,
+			self.upleft[1] + h_lever * (currentPage-1),
+			self.downright[0]-self.upleft[0],
+			h_lever,
+			lcd.WHITE,
+			lcd.DARKGREY)
+
+	def __guiUpdate(self):
 		lcd.setCursor(self.upleft[0]+1, self.upleft[1]+1)
 
 		cp = int(self.index / self.MIOP) + 1	# Current page
-		if self.currentPage != cp:
+		if self.currentPage != cp:				# Which means that it is time to flip over
 			self.currentPage = cp
 			self.__drawBackground()
+			self.__drawNaviBar(cp)
 
-		sru = (cp - 1) * self.MIOP# + (cp - 1)
+		sru = (cp - 1) * self.MIOP
 		if len(self.selections) - sru >= self.MIOP:
 			srd = sru + self.MIOP
 		else:
@@ -162,18 +183,18 @@ class Menu():
 			else:
 				lcd.println(self.selections[i], color=lcd.WHITE)
 
-# class PyList(Menu):
-# 	def execute(self):
-# 		global flag_isHalt
-# 		flag_isHalt = True
-# 		pyRun(self.selections[self.index])
+	def refresh(self, newSelections):
+		self.selections = newSelections
+		self.index = 0
+		self.__drawBackground()
+		if len(self.selections) > self.MIOP:
+			self.__drawNaviBar(1)
+		self.__guiUpdate()
 
 class FileList(Menu):
 	def __init__(self, root):
-		# self.root = root
 		files = list(set(uos.listdir(root)) - fsys)
 		if uos.getcwd() != '/':
-			# files.insert(0, '/'.join(uos.getcwd().split('/')[:-1]))
 			files.insert(0, '/')
 		uos.chdir(root)
 		super().__init__(files)
@@ -184,6 +205,7 @@ class FileList(Menu):
 		buttonA.wasPressed(eventCls)
 		buttonB.wasPressed(eventCls)
 		buttonC.wasPressed(eventCls)
+		print('Launch %s...' %  uos.getcwd()+'/'+fname)
 		lcd.setCursor(self.upleft[0]+1, self.upleft[1]+1)
 		lcd.println('Now loading...')
 		with open(fname, 'r') as o:
@@ -195,17 +217,18 @@ class FileList(Menu):
 		lcd.clear()
 		import cache
 		cache.main()
+		uos.remove(PATH_CACHE)
 
 	def fileSelected(self):
 		try:
 			uos.chdir(self.selections[self.index])
-			self.selections = list(set(uos.listdir()) - fsys)
+			newFileList = list(set(uos.listdir()) - fsys)
 			if uos.getcwd() != '/':
-				# self.selections.insert(0, '/' + '/'.join(uos.getcwd().split('/')[:-1]))
-				self.selections.insert(0, '/')
-			self.index = 0
-			self.__drawBackground()
-			self.update()
+				newFileList.insert(0, '/')
+			# self.index = 0
+			# self.__drawBackground()
+			# self.guiUpdate()
+			self.refresh(newFileList)
 		except:
 			if self.selections[self.index][-3:] == '.py':
 				self.pyRun(self.selections[self.index])
@@ -219,10 +242,7 @@ def welcome(root):
 	fw = Framework('M5UI')
 	fw.drawFrame()
 	frontpage = FileList(root)
-	frontpage.update()
-	buttonA.wasPressed(frontpage.pressUp)
-	buttonB.wasPressed(frontpage.pressDown)
-	buttonC.wasPressed(frontpage.fileSelected)
+	# frontpage.guiUpdate()
 
 def main():
 	flushCache()

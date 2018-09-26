@@ -12,5 +12,6 @@ def main():
 			lcd.println('Server status: %s' % fs[2])
 			lcd.println('Data status: %s' % fs[3])
 			time.sleep(1)
+		network.ftp.stop()
 	except:
 		pass
