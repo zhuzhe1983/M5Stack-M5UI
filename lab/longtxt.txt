@@ -1,0 +1,40 @@
+{"wifi": {"ssid": "5953e29df46e40b659", "password": "Qaz5"}}
+It is the origin of the earth.
+We need the god
+//Reference Start
+1400
+//Reference End
+1500
+// Offset Start
+2500
+// Offset End
+2600
+// Cut Start
+2745
+// CUt End
+3105
+//Reference Start
+1400
+//Reference End
+1500
+// Offset Start
+2500
+//Reference Start
+600
+//Reference End
+700
+// Offset Start
+1800
+// Offset End
+1900
+// Cut Start
+2050
+// CUt End
+3140
+2500
+// Offset End
+2600
+// Cut Start
+2745
+// CUt End
+3105

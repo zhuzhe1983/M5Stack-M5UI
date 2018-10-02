@@ -16,7 +16,7 @@ def eventCls():
 	pass
 
 def flushCache():
-	with open(PATH_CACHE, 'w') as o:
+	with open(PATH_CACHE, 'wb') as o:
 		o.write('')
 
 def styleInit():
@@ -78,13 +78,6 @@ class Framework():
 		else:
 			return 0
 
-	# def ftpStatus(self):
-	# 	status = network.ftp.status()
-	# 	if status[0] == -1:
-	# 		return 0
-	# 	else:
-	# 		return 1
-
 	def __th_statusMonitor(self):
 		ip = UIPainter()
 		while (FLAG_FOREGROUND):
@@ -98,18 +91,19 @@ class Framework():
 			# 	ip.text(60, 5, 'FTP')
 			time.sleep(1)
 
-	def drawFrame(self):
+	def drawBanner(self):
 		lcd.rect(0, 0, self.W, self.h_banner, lcd.BLUE, lcd.BLUE)
 		lcd.setCursor(self.W - lcd.textWidth(self.title) - 5, 5)
 		lcd.print(self.title)
+		th_m = _thread.start_new_thread('monitor', self.__th_statusMonitor, ())
+
+	def drawNaviButton(self, strA='UP', strB='DOWN', strC='SELECT'):
 		lcd.rect(0, self.H - self.h_bottom, self.W, self.h_bottom, lcd.DARKGREY, lcd.DARKGREY)
 		lcd.line(int(self.W / 3), self.H - self.h_bottom, int(self.W / 3), self.H, lcd.WHITE)
 		lcd.line(int(2 * self.W / 3), self.H - self.h_bottom, int(2 * self.W / 3), self.H, lcd.WHITE)
-		lcd.text(40, 215, 'UP', lcd.WHITE)
-		lcd.text(135, 215, 'DOWN', lcd.WHITE)
-		lcd.text(240, 215, 'SELECT', lcd.WHITE)
-		th_m = _thread.start_new_thread('monitor', self.__th_statusMonitor, ())
-
+		lcd.text(40, 215, strA, lcd.WHITE)
+		lcd.text(135, 215, strB, lcd.WHITE)
+		lcd.text(240, 215, strC, lcd.WHITE)
 
 class Menu():
 	def __init__(self, selections):
@@ -199,40 +193,95 @@ class FileList(Menu):
 		uos.chdir(root)
 		super().__init__(files)
 
-	def pyRun(self, fname):
-		global FLAG_FOREGROUND
-		FLAG_FOREGROUND = False
-		buttonA.wasPressed(eventCls)
-		buttonB.wasPressed(eventCls)
-		buttonC.wasPressed(eventCls)
+	def pyLauncher(self, fname):
 		print('Launch %s...' %  uos.getcwd()+'/'+fname)
 		lcd.setCursor(self.upleft[0]+1, self.upleft[1]+1)
 		lcd.println('Now loading...')
-		with open(fname, 'r') as o:
+		with open(fname, 'rb') as o:
 			code = o.read()
-		with open(PATH_CACHE, 'w') as o:
+		with open(PATH_CACHE, 'wb') as o:
 			o.write(code)
 		if 'cache' in sys.modules.keys():
 			del sys.modules['cache']
 		lcd.clear()
-		import cache
-		cache.main()
+		try:
+			import cache
+			cache.main()
+		except:
+			print('ERR')
+			raise
 		uos.remove(PATH_CACHE)
 
+	def txtReader(self, fname):
+		lcd.clear()
+		f = Framework('txtReader')
+		f.drawNaviButton(strC='EXIT')
+		lcd.font(lcd.FONT_Ubuntu, transparent=False, fixedwidth=True)
+		idx = 0
+		idx_s = [0]
+		page = 0
+		while True:
+			letter_current_page = 0
+			lcd.setCursor(0, 0)
+			lcd.rect(0, 0, 320, 240 - f.h_bottom, lcd.BLACK, lcd.BLACK)
+			with open(fname, 'r') as o:
+				o.seek(idx)
+				flag_end = False
+
+				for row in range(11):
+					for col in range(19):
+						c = o.read(1)
+						if not c:
+							lcd.println('--- END ---')
+							flag_end = True
+							break
+						if c != '\n':
+							lcd.print(c)
+							letter_current_page += 1
+						else:
+							letter_current_page += 1
+							break
+					lcd.print('\n')
+					if flag_end:
+						break
+			while True:
+				time.sleep(0.1)
+				if buttonA.isPressed():
+					if page != 0:
+						page -= 1
+						del(idx_s[-1])
+						idx = idx_s[-1]
+						break
+				elif buttonB.isPressed():
+					if c:
+						idx += letter_current_page
+						idx_s.append(idx)
+						page += 1
+						break
+				elif buttonC.isPressed():
+					return 0
+
 	def fileSelected(self):
-		try:
-			uos.chdir(self.selections[self.index])
-			newFileList = list(set(uos.listdir()) - fsys)
-			if uos.getcwd() != '/':
-				newFileList.insert(0, '/')
-			# self.index = 0
-			# self.__drawBackground()
-			# self.guiUpdate()
-			self.refresh(newFileList)
-		except:
+		if '.' in self.selections[self.index]:
+			global FLAG_FOREGROUND
+			FLAG_FOREGROUND = False
+			buttonA.wasPressed(eventCls)
+			buttonB.wasPressed(eventCls)
+			buttonC.wasPressed(eventCls)
 			if self.selections[self.index][-3:] == '.py':
-				self.pyRun(self.selections[self.index])
-				welcome(uos.getcwd())
+				self.pyLauncher(self.selections[self.index])
+			elif self.selections[self.index][-4:] == '.txt' or self.selections[self.index][-5:] == '.json':
+				self.txtReader(self.selections[self.index])
+			welcome(uos.getcwd())
+		else:
+			try:
+				uos.chdir(self.selections[self.index])
+				newFileList = list(set(uos.listdir()) - fsys)
+				if uos.getcwd() != '/':
+					newFileList.insert(0, '/')
+				self.refresh(newFileList)
+			except:
+				pass
 
 def welcome(root):
 	global FLAG_FOREGROUND
@@ -240,7 +289,8 @@ def welcome(root):
 	lcd.clear()
 	styleInit()
 	fw = Framework('M5UI')
-	fw.drawFrame()
+	fw.drawBanner()
+	fw.drawNaviButton()
 	frontpage = FileList(root)
 	# frontpage.guiUpdate()
 
