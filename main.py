@@ -10,6 +10,7 @@ import _thread
 fsys = set(['main.py', 'boot.py', 'cache.py'])
 
 PATH_CACHE = './cache.py'
+PATH_TIME = '/flash/timenow.txt'
 FLAG_FOREGROUND = True
 
 def eventCls():
@@ -29,6 +30,22 @@ def sysInit():
 		uos.mountsd()
 	except:
 		lcd.print('Cannot mount SD card!')
+
+def sysTime():
+	def __timer():
+		timenow = 0
+		with open(PATH_TIME, 'r') as o:
+			timenow = int(o.read())
+		while True:
+			time.sleep(1)
+			timenow += 1
+			with open(PATH_TIME, 'w') as o:
+				o.write(str(timenow))
+	# (16384, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+	if uos.stat(PATH_TIME)[6] == 0:
+		with open(PATH_TIME, 'w') as o:
+			o.write('0')
+	th_m = _thread.start_new_thread('timer', __timer, ())
 
 
 class UIPainter:
@@ -296,6 +313,7 @@ def welcome(root):
 
 def main():
 	flushCache()
+	sysTime()
 	sysInit()
 	welcome('/')
 
