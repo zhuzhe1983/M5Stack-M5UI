@@ -223,7 +223,11 @@ class FileList(Menu):
 		lcd.clear()
 		try:
 			import cache
-			cache.main()
+			if code[:18] == b'# -*- advanced -*-':
+				print('-*- This is an advanced program -*-')
+				cache.Main().run()
+			else:
+				cache.main()
 		except:
 			print('ERR')
 			raise
