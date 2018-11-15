@@ -291,7 +291,7 @@ class FileList(Menu):
 			buttonC.wasPressed(eventCls)
 			if self.selections[self.index][-3:] == '.py':
 				self.pyLauncher(self.selections[self.index])
-			elif self.selections[self.index][-4:] == '.txt' or self.selections[self.index][-5:] == '.json':
+			elif self.selections[self.index][-4:].lower() in ['.txt', '.csv'] or self.selections[self.index][-5:].lower() == '.json':
 				self.txtReader(self.selections[self.index])
 			welcome(uos.getcwd())
 		else:

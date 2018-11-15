@@ -13,6 +13,7 @@ class Main:
 	def __init__(self):
 		self.DNAME_ROOT = 'wifi_analyzer'
 		self.FNAME_FRONT = 'WA_'
+		self.PATH_LOG = './log_WiFiAnalyzeMT.txt'
 		self.FLAG_WRITTING = 0
 		self.FLAG_END = 0
 
@@ -20,9 +21,6 @@ class Main:
 		self.strBuf = ''
 		self.wlan = network.WLAN(network.STA_IF)
 		self.wlan.active(True)
-
-	def btn_stop(self):
-		self.FLAG_END = 1
 
 	def drawNaviButton(self, strA='START', strB='STOP', strC='EXIT'):
 		lcd.text(40, 215, strA, lcd.WHITE)
@@ -62,14 +60,31 @@ class Main:
 		return 0
 
 	def __th_writter(self):
-		self.FLAG_WRITTING = 1
-		with open('/sd/'+self.DNAME_ROOT+'/'+self.fname_save, 'a') as o:
-			o.write(self.strBuf)
-		self.FLAG_WRITTING = 0
+		if self.FLAG_END == 0:
+			self.FLAG_WRITTING = 1
+			with open('/sd/'+self.DNAME_ROOT+'/'+self.fname_save, 'a') as o:
+				o.write(self.strBuf)
+			self.FLAG_WRITTING = 0
 		return 0
 
-	def __th_display(self):
-		print(self.strBuf+'---------------------')
+	def __th_display(self, apresults):
+		if self.FLAG_END == 0:
+			print(self.strBuf+'---------------------')
+			lcd.rect(0,0,320,210, lcd.BLACK, lcd.BLACK)
+			lcd.setCursor(0,0)
+			lcd.font(lcd.FONT_DefaultSmall)
+			
+			if len(apresults) < 15:
+				i = 0
+				for apresult in apresults:
+					resstr = '%02d, ch: %02d, rs: %d, %s\n' % (i+1, apresult[2], apresult[3], apresult[0].decode())
+					lcd.print(resstr,color = lcd.WHITE)
+					i = i + 1
+			else:
+				for i in range(0,15):
+					apresult = apresults[i]
+					resstr = '%02d, ch: %02d, rs: %d, %s\n' % (i+1, apresult[2], apresult[3], apresult[0].decode())
+					lcd.print(resstr,color = lcd.WHITE)
 		return 0
 
 	def scanner(self):
@@ -85,7 +100,10 @@ class Main:
 					self.strBuf += '%f,%s,%s,%d,%s\n' % (time.time()-ts, (binascii.hexlify(ap[1])).decode(), ap[0].decode(), ap[3], ap[2])
 				
 				th1 = _thread.start_new_thread('sd', self.__th_writter, ())
-				th2 = _thread.start_new_thread('display', self.__th_display, ())
+				th2 = _thread.start_new_thread('display', self.__th_display, (aps, ))
+			else:
+				with open(self.PATH_LOG, 'w') as o:
+					o.write('[%f] Write failed.' % time.time()-ts)
 		self.FLAG_END = 1
 		return 0
 
@@ -94,12 +112,11 @@ class Main:
 		if self.fileCheck() < 0:
 			return -1
 		self.drawNaviButton()
-		buttonC.wasPressed(self.btn_stop)
 		
 		lcd.setCursor(0,0)
 		lcd.println('Press START to start')
 		while not buttonA.isPressed():
-			if self.FLAG_END == 1:
+			if buttonC.isPressed():
 				return 0
 			time.sleep(.5)
 

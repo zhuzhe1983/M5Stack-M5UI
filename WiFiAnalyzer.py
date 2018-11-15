@@ -2,13 +2,13 @@ def main():
 	import time
 	import uos
 
-	from m5stack import lcd, buttonA, buttonB
+	from m5stack import lcd, buttonA, buttonB, buttonC
 	import network
 	import binascii
 
 	DNAME_ROOT = 'wifi_analyzer'
 
-	def drawNaviButton(strA='START', strB='STOP', strC='???'):
+	def drawNaviButton(strA='START', strB='STOP', strC='EXIT'):
 		lcd.text(40, 215, strA, lcd.WHITE)
 		lcd.text(135, 215, strB, lcd.WHITE)
 		lcd.text(240, 215, strC, lcd.WHITE)
@@ -25,9 +25,9 @@ def main():
 			return 'WA_%s.csv' % (('%4d' % (no + 1)).replace(' ', '0'))
 
 	def resdisplay(apresults):
-		lcd.rect(0,0,320,210,lcd.BLACK)
+		lcd.rect(0,0,320,210, lcd.BLACK, lcd.BLACK)
 		lcd.setCursor(0,0)
-		lcd.font(lcd.FONT_DefaultSmall, transparent=False)
+		lcd.font(lcd.FONT_DefaultSmall)
 		
 		if len(apresults) < 15:
 			i = 0
@@ -65,6 +65,8 @@ def main():
 		lcd.println('Press START to start')
 		while not buttonA.isPressed():
 			time.sleep(.5)
+			if buttonC.isPressed():
+				return 0
 			
 		wlan = network.WLAN(network.STA_IF)
 		wlan.active(True)
