@@ -78,9 +78,12 @@ def main():
 		ts = time.time()
 		while not buttonB.isPressed():
 			aps = wlan.scan()
+			te = time.time()-ts
 			for ap in aps:
 				# (ssid, bssid, primary_chan, rssi, auth_mode, auth_mode_string, hidden)
-				buf += '%f,%s,%s,%d,%s\n' % (time.time()-ts, (binascii.hexlify(ap[1])).decode(), ap[0].decode(), ap[3], ap[2])
+				mac = (binascii.hexlify(ap[1])).decode()
+				mac = ':'.join([mac[:2], mac[2:4], mac[4:6], mac[6:8], mac[8:10], mac[10:12]])
+				buf += '%.3f,%s,%s,%d,%s\n' % (te, mac, ap[0].decode(), ap[3], ap[2])
 			print(buf+'---------------------')
 			resdisplay(aps)
 			# lcd.print(buf)

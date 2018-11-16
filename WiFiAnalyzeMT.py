@@ -13,7 +13,7 @@ class Main:
 	def __init__(self):
 		self.DNAME_ROOT = 'wifi_analyzer'
 		self.FNAME_FRONT = 'WA_'
-		self.PATH_LOG = './log_WiFiAnalyzeMT.txt'
+		self.PATH_LOG = '/flash/log/log_WiFiAnalyzeMT.txt'
 		self.FLAG_WRITTING = 0
 		self.FLAG_END = 0
 

@@ -7,10 +7,10 @@ import time
 import _thread
 
 # Files in sysPy will not be shown in app list
-fsys = set(['main.py', 'boot.py', 'cache.py'])
+fsys = set(['main.py', 'boot.py', 'cache.py', 'alib'])
 
 PATH_CACHE = './cache.py'
-PATH_TIME = '/flash/timenow.txt'
+PATH_TIME = '/flash/etc/timenow.txt'
 FLAG_FOREGROUND = True
 
 def eventCls():
