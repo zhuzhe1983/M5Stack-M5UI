@@ -31,6 +31,6 @@ def main():
 
 		if isConnected:
 			while not buttonA.isPressed():
-				pass
+				time.sleep(.2)
 	except:
 		pass

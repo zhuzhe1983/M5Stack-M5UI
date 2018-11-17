@@ -317,7 +317,7 @@ def welcome(root):
 
 def main():
 	flushCache()
-	sysTime()
+	# sysTime()
 	sysInit()
 	welcome('/')
 

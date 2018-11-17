@@ -3,6 +3,7 @@
 
 import time
 import uos
+import _thread
 
 from m5stack import lcd, buttonA, buttonB, buttonC
 from machine import I2C, Timer
@@ -67,41 +68,95 @@ class Main:
 			return -2
 		return 0
 
-	def sd(self):
-		lcd.println('Write into SD...')
-		with open('/sd/'+self.DNAME_ROOT+'/'+self.fname_save, 'a') as o:
-			for ds in self.dataBuffer:
-				o.write('%f,%f,%f,%f,%f,%f,%f\n' % ds)
-		lcd.println('OK.')
-		return 0
+	def __th_sd(self):
+		_thread.allowsuspend(True)
+		while True:
+			bufLen = len(self.dataBuffer)
+			if bufLen > self.SIZE_BUF and self.FLAG_SD == 0:
+				self.FLAG_SD = 1
+				strBuffer = ''
+				handle = self.dataBuffer[:bufLen]
+				del(self.dataBuffer[:bufLen])
+				for ds in handle:
+					strBuffer += ('%f,%f,%f,%f,%f,%f,%f\n' % ds)
+				with open('/sd/'+self.DNAME_ROOT+'/'+self.fname_save, 'a') as o:
+					o.write(strBuffer)
+				print('Write out. (%d)' % bufLen)
+				self.FLAG_SD = 0
+			else:
+				time.sleep(.2)
+
 
 	def createTimer(self):
+		th_sd = _thread.start_new_thread('sd', self.__th_sd, ())
 		def __getIMUData(timer):
 			if not buttonB.isPressed():
 				try:
 					self.dataBuffer.append((time.time(), )+self.imu.acceleration+self.imu.gyro)
 					self.n += 1
+					# self.counter += 1
+					# print(self.imu.acceleration)
+					# if self.FLAG_SD == 0:
+
 				except:
 					print('Terminated.')
 			else:
 				self.FLAG_END = 1
 				self.t1.deinit()
 				self.i2c.deinit()
-				self.sd()
 
 		self.t1 = Timer(0)
 		self.t1.init(period=20, mode=self.t1.PERIODIC, callback=__getIMUData)
+		
+				# bufLen = len(self.dataBuffer)
+				# if bufLen > self.SIZE_BUF:
+				# 	strBuffer = ''
+				# 	handle = self.dataBuffer[:bufLen]
+				# 	del(self.dataBuffer[:bufLen])
+				# 	for ds in handle:
+				# 		strBuffer += ('%f,%f,%f,%f,%f,%f,%f\n' % ds)
+				# 	with open('/sd/'+self.DNAME_ROOT+'/'+self.fname_save, 'a') as o:
+				# 		o.write(strBuffer)
+				# 	print('Write out.')
+
 
 	def IMU_Record(self):
+		
+
+		# buttonB.wasPressed(__press_stop)
+
 		try:
 			self.i2c = I2C(sda=21, scl=22, speed=400000)
-			self.imu = MPU6050(self.i2c, accel_fs=0b00001000)
+			self.imu = MPU6050(self.i2c)
 		except:
 			print('I2C error.')
 			self.i2c.deinit()
 			return -1
 		
 		self.createTimer()
+		# th_imu = _thread.start_new_thread('imu', self.__th_createTimer, ())
+		# while not buttonB.isPressed():
+		# 	if self.FLAG_END == 1:
+		# 		break
+		# 	bufLen = len(self.dataBuffer)
+		# 	if bufLen > self.SIZE_BUF:
+		# 		strBuffer = ''
+		# 		for ds in self.dataBuffer[:bufLen]:
+		# 			strBuffer += ('%f,%f,%f,%f,%f,%f,%f\n' % ds)
+		# 		with open('/sd/'+self.DNAME_ROOT+'/'+self.fname_save, 'a') as o:
+		# 			o.write(strBuffer)
+		# 		print('Write out.')
+		# self.t1.deinit()
+		# self.i2c.deinit()
+		# self.FLAG_END = 1
+
+		# self.i2c.deinit()
+		# self.t1.deinit()
+		# # lcd.println('Writing...')
+
+		# # with open('/sd/'+self.DNAME_ROOT+'/'+self.fname_save, 'a') as o:
+		# # 	for ds in self.dataBuf:
+		# # 		o.write('%f,%f,%f,%f,%f,%f,%f\n' % ds)
 		
 		return 0
 
@@ -122,6 +177,8 @@ class Main:
 		lcd.println('Record into %s' % self.fname_save)
 
 		self.IMU_Record()
+		# self.t1.deinit()
+		# self.i2c.deinit()
 		return 0
 # ------------------------------------------
 
