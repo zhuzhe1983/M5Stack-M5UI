@@ -1,52 +1,31 @@
 import uos
 import sys
 import time
-from m5stack import lcd, buttonA, buttonB, buttonC
 import network
 import time
+
+from m5stack import lcd, buttonA, buttonB, buttonC
+from micropython import const
 import _thread
 
-# Files in sysPy will not be shown in app list
+# Files in fsys will not be shown in app list
 fsys = set(['main.py', 'boot.py', 'cache.py', 'alib'])
 
 PATH_CACHE = './cache.py'
-PATH_TIME = '/flash/etc/timenow.txt'
 FLAG_FOREGROUND = True
 
 def eventCls():
 	pass
-
-def flushCache():
-	with open(PATH_CACHE, 'wb') as o:
-		o.write('')
 
 def styleInit():
 	lcd.setColor(lcd.WHITE)
 	lcd.font(lcd.FONT_Ubuntu, transparent=True, fixedwidth=False)
 
 def sysInit():
-	import uos
 	try:
 		uos.mountsd()
 	except:
 		lcd.print('Cannot mount SD card!')
-
-def sysTime():
-	def __timer():
-		timenow = 0
-		with open(PATH_TIME, 'r') as o:
-			timenow = int(o.read())
-		while True:
-			time.sleep(1)
-			timenow += 1
-			with open(PATH_TIME, 'w') as o:
-				o.write(str(timenow))
-	# (16384, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-	if uos.stat(PATH_TIME)[6] == 0:
-		with open(PATH_TIME, 'w') as o:
-			o.write('0')
-	th_m = _thread.start_new_thread('timer', __timer, ())
-
 
 class UIPainter:
 	def __init__(self):
@@ -69,14 +48,14 @@ class UIPainter:
 		while not buttonA.isPressed():
 			time.sleep(1)
 
-class Framework():
+class Framework:
 	def __init__(self, title):
-		self.W = 320
-		self.H = 240
-		self.h_banner = 24
-		self.h_bottom = 36
+		print('Framework %s ready' % title)
+		self.W = const(320)
+		self.H = const(240)
+		self.h_banner = const(24)
+		self.h_bottom = const(36)
 		self.title = title
-		# self.foreground = True
 
 	def wifiStatus(self):
 		sta_if = network.WLAN(network.STA_IF)
@@ -97,16 +76,18 @@ class Framework():
 
 	def __th_statusMonitor(self):
 		ip = UIPainter()
+		if self.sdStatus():
+			ip.text(30, 5, 'SD')
 		while (FLAG_FOREGROUND):
-			if self.wifiStatus() == 1:
+			wifi = self.wifiStatus()
+			# sd = self.sdStatus()
+			if wifi == 1:
 				ip.wifi(0, 2, 20, lcd.DARKGREY)
-			elif self.wifiStatus() == 2:
+			elif wifi == 2:
 				ip.wifi(0, 2, 20)
-			if self.sdStatus():
-				ip.text(30, 5, 'SD')
 			# if self.ftpStatus():
 			# 	ip.text(60, 5, 'FTP')
-			time.sleep(1)
+			time.sleep(3)
 
 	def drawBanner(self):
 		lcd.rect(0, 0, self.W, self.h_banner, lcd.BLUE, lcd.BLUE)
@@ -126,12 +107,10 @@ class Menu():
 	def __init__(self, selections):
 		self.selections = selections
 		self.index = 0					# Initial choice
-		self.MIOP = 11					# Max Index in One Page
+		self.MIOP = const(11)			# Max Index in One Page
 		self.currentPage = 1
 		self.upleft = (0, 24)
 		self.downright = (320, 204)
-		# self.__drawBackground()
-		self.refresh(selections)
 		buttonA.wasPressed(self.pressUp)
 		buttonB.wasPressed(self.pressDown)
 		buttonC.wasPressed(self.fileSelected)
@@ -195,6 +174,9 @@ class Menu():
 				lcd.println(self.selections[i], color=lcd.WHITE)
 
 	def refresh(self, newSelections):
+		buttonA.wasPressed(self.pressUp)
+		buttonB.wasPressed(self.pressDown)
+		buttonC.wasPressed(self.fileSelected)
 		self.selections = newSelections
 		self.index = 0
 		self.__drawBackground()
@@ -204,13 +186,39 @@ class Menu():
 
 class FileList(Menu):
 	def __init__(self, root):
-		files = list(set(uos.listdir(root)) - fsys)
-		if uos.getcwd() != '/':
-			files.insert(0, '/')
+		self.framework = Framework('M5UI')
+		self.root_current = root
 		uos.chdir(root)
-		super().__init__(files)
+		super().__init__(self.__path2fileList(root))
+		self.ui_refresh()
 
-	def pyLauncher(self, fname):
+	def __path2fileList(self, path):
+		fl = list(set(uos.listdir(path)) - fsys)
+		fl.sort()
+		if path != '/':
+			fl.insert(0, '/')
+		return fl
+
+	def __ext(self, fname, exts):
+		if '.' not in fname:
+			return False
+		elif fname.split('.')[-1].lower() in exts:
+			return True
+		else:
+			return False
+
+	def ui_refresh(self):
+		global FLAG_FOREGROUND
+		FLAG_FOREGROUND = True
+		styleInit()
+		self.framework.drawBanner()
+		self.framework.drawNaviButton()
+
+		self.refresh(self.__path2fileList(self.root_current))
+		print('*** Welcome to M5UI ***')
+		print('Start from: %s' % self.root_current)
+
+	def app_pyLauncher(self, fname):
 		print('Launch %s...' %  uos.getcwd()+'/'+fname)
 		lcd.setCursor(self.upleft[0]+1, self.upleft[1]+1)
 		lcd.println('Now loading...')
@@ -221,23 +229,19 @@ class FileList(Menu):
 		if 'cache' in sys.modules.keys():
 			del sys.modules['cache']
 		lcd.clear()
-		try:
-			import cache
-			if code[:18] == b'# -*- advanced -*-':
-				print('-*- This is an advanced program -*-')
-				cache.Main().run()
-			else:
-				cache.main()
-		except:
-			print('ERR')
-			raise
+		import cache
+		if code[:18] == b'# -*- advanced -*-':
+			print('-*- This is an advanced program -*-')
+			cache.Main().run()
+		else:
+			cache.main()
 		uos.remove(PATH_CACHE)
 
-	def txtReader(self, fname):
+	def app_txtReader(self, fname):
 		lcd.clear()
 		f = Framework('txtReader')
 		f.drawNaviButton(strC='EXIT')
-		lcd.font(lcd.FONT_Ubuntu, transparent=False, fixedwidth=True)
+		lcd.font(lcd.FONT_DefaultSmall, transparent=False, fixedwidth=True)
 		idx = 0
 		idx_s = [0]
 		page = 0
@@ -249,8 +253,8 @@ class FileList(Menu):
 				o.seek(idx)
 				flag_end = False
 
-				for row in range(11):
-					for col in range(19):
+				for row in range(20):
+					for col in range(29):
 						c = o.read(1)
 						if not c:
 							lcd.println('--- END ---')
@@ -289,37 +293,25 @@ class FileList(Menu):
 			buttonA.wasPressed(eventCls)
 			buttonB.wasPressed(eventCls)
 			buttonC.wasPressed(eventCls)
-			if self.selections[self.index][-3:] == '.py':
-				self.pyLauncher(self.selections[self.index])
-			elif self.selections[self.index][-4:].lower() in ['.txt', '.csv'] or self.selections[self.index][-5:].lower() == '.json':
-				self.txtReader(self.selections[self.index])
-			welcome(uos.getcwd())
+			if self.__ext(self.selections[self.index], ['py']):
+				self.app_pyLauncher(self.selections[self.index])
+			elif self.__ext(self.selections[self.index], ['csv', 'json', 'txt']):
+				self.app_txtReader(self.selections[self.index])
+			self.ui_refresh()
 		else:
 			try:
 				uos.chdir(self.selections[self.index])
-				newFileList = list(set(uos.listdir()) - fsys)
-				if uos.getcwd() != '/':
-					newFileList.insert(0, '/')
-				self.refresh(newFileList)
+				self.root_current = uos.getcwd()
+				self.refresh(self.__path2fileList(uos.getcwd()))
+				print('Enter folder: %s' % self.root_current)
 			except:
+				print('*** Unknown file type ***')
 				pass
 
-def welcome(root):
-	global FLAG_FOREGROUND
-	FLAG_FOREGROUND = True
-	lcd.clear()
-	styleInit()
-	fw = Framework('M5UI')
-	fw.drawBanner()
-	fw.drawNaviButton()
-	frontpage = FileList(root)
-	# frontpage.guiUpdate()
-
 def main():
-	flushCache()
-	# sysTime()
 	sysInit()
-	welcome('/')
+	styleInit()
+	FileList('/')
 
 if __name__ == '__main__':
 	main()

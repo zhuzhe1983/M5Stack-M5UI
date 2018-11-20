@@ -78,10 +78,10 @@ def main():
 		fname = fnameGen()
 		lcd.println('Recording into %s...' % fname)
 		
-		buf = ''
 		ts = time.time()
 		n = 0
 		while not buttonB.isPressed():
+			buf = ''
 			aps = wlan.scan()
 			n += 1
 			te = time.time()-ts
@@ -92,13 +92,10 @@ def main():
 				buf += '%.3f,%s,%s,%d,%s\n' % (te, mac, ap[0].decode(), ap[3], ap[2])
 			print(buf+'---------------------')
 			resdisplay(aps, n, int(te))
-			# lcd.print(buf)
 
 			with open('/sd/'+DNAME_ROOT+'/'+fname, 'a') as o:
 				o.write(buf)
-			buf = ''
 		lcd.println('Exit.')
-			# time.sleep(1)
 
 	except:
 		print('Exit since error.')
