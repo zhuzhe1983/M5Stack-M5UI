@@ -8,6 +8,7 @@ def main():
 
 	DNAME_ROOT = 'wifi_analyzer'
 
+
 	def drawNaviButton(strA='START', strB='STOP', strC='EXIT'):
 		lcd.text(40, 215, strA, lcd.WHITE)
 		lcd.text(135, 215, strB, lcd.WHITE)
@@ -24,9 +25,12 @@ def main():
 			no = int(newestFileName[3:7])
 			return 'WA_%s.csv' % (('%4d' % (no + 1)).replace(' ', '0'))
 
-	def resdisplay(apresults):
-		lcd.rect(0,0,320,210, lcd.BLACK, lcd.BLACK)
-		lcd.setCursor(0,0)
+	def resdisplay(apresults, n, time):
+		lcd.rect(0, 0, 320, 24, lcd.BLUE, lcd.BLUE)
+		lcd.font(lcd.FONT_Ubuntu, transparent=True)
+		lcd.text(0, 2, 'N_AP:%d N_SCAN:%d TIME:%d' % (len(apresults), n, time), lcd.WHITE)
+		lcd.rect(0,24,320,186, lcd.BLACK, lcd.BLACK)
+		lcd.setCursor(0,24)
 		lcd.font(lcd.FONT_DefaultSmall)
 		
 		if len(apresults) < 15:
@@ -76,8 +80,10 @@ def main():
 		
 		buf = ''
 		ts = time.time()
+		n = 0
 		while not buttonB.isPressed():
 			aps = wlan.scan()
+			n += 1
 			te = time.time()-ts
 			for ap in aps:
 				# (ssid, bssid, primary_chan, rssi, auth_mode, auth_mode_string, hidden)
@@ -85,13 +91,13 @@ def main():
 				mac = ':'.join([mac[:2], mac[2:4], mac[4:6], mac[6:8], mac[8:10], mac[10:12]])
 				buf += '%.3f,%s,%s,%d,%s\n' % (te, mac, ap[0].decode(), ap[3], ap[2])
 			print(buf+'---------------------')
-			resdisplay(aps)
+			resdisplay(aps, n, int(te))
 			# lcd.print(buf)
 
 			with open('/sd/'+DNAME_ROOT+'/'+fname, 'a') as o:
 				o.write(buf)
 			buf = ''
-			
+		lcd.println('Exit.')
 			# time.sleep(1)
 
 	except:
