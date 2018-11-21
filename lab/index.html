@@ -1,0 +1,54 @@
+<html>
+
+<head>
+	<title>henChat</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+  <link rel="stylesheet" href="backend/codemirror.css">
+  <link rel="stylesheet" href="./css/main.css"/>
+
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <script src="backend/codemirror.js"></script>
+  <script src="backend/matchbrackets.js"></script>
+  <script src="backend/python.js"></script>
+
+
+	<!-- Portable devices support -->
+	<meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0, user-scalable=no"/>
+</head>
+
+<body>
+  <div>
+    <input type="text" size="50" id="s_cmd">
+    <button id="btn_enter" title="Enter can work too">Enter</button>
+  </div>
+  <div id="log"></div>
+  <div>
+  	<article>
+    	<div><textarea id="code" name="code"></textarea></div>
+	</article>
+
+  </div>
+
+<script>
+    var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+        mode: {name: "python",
+                version: 3,
+                singleLineStringErrors: false},
+        lineNumbers: true,
+        indentUnit: 4,
+        matchBrackets: true
+    });
+
+    CodeMirror.fromTextArea(document.getElementById("code-cython"), {
+        mode: {name: "text/x-cython",
+            version: 3,
+            singleLineStringErrors: false},
+        lineNumbers: true,
+        indentUnit: 4,
+        matchBrackets: true
+    });
+</script>
+<!-- <script src="js/base64.js"></script> -->
+<script src="hcq-core.js"></script>
+</body>
+</html>

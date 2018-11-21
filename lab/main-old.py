@@ -134,70 +134,44 @@ class Menu():
 			self.upleft[1],
 			self.downright[0]-self.upleft[0],
 			self.downright[1]-self.upleft[1],
-			lcd.WHITE,
-			lcd.WHITE)
+			lcd.BLACK,
+			lcd.BLACK)
 
 	def __drawNaviBar(self, currentPage):
-		h_bar = self.downright[1]-self.upleft[1] #204-24 = 180
+		h_bar = self.downright[1]-self.upleft[1]
 		h_lever = int(h_bar / int(len(self.selections) / self.MIOP + 1))
 		lcd.rect(308,
 			self.upleft[1],
 			self.downright[0]-self.upleft[0],
 			h_bar,
-			lcd.BLUE,
-			lcd.BLUE)
+			lcd.WHITE,
+			lcd.WHITE)
 		lcd.rect(308,
 			self.upleft[1] + h_lever * (currentPage-1),
 			self.downright[0]-self.upleft[0],
 			h_lever,
-			lcd.BLUE,
-			lcd.DARKGREY)
-
-	def __drawNaviBarcp1(self):
-		h_bar = self.downright[1]-self.upleft[1] #204-24 = 180
-		lcd.rect(308,
-			self.upleft[1],
-			self.downright[0]-self.upleft[0],
-			h_bar,
-			lcd.BLUE,
-			lcd.BLUE)
-		lcd.rect(308,
-			24,
-			self.downright[0]-self.upleft[0],
-			170,
-			lcd.BLUE,
+			lcd.WHITE,
 			lcd.DARKGREY)
 
 	def __guiUpdate(self):
 		lcd.setCursor(self.upleft[0]+1, self.upleft[1]+1)
 
 		cp = int(self.index / self.MIOP) + 1	# Current page
-
-		if len(self.selections) <= 11:
-			self.__drawNaviBarcp1()
-			cp = 1
-		
 		if self.currentPage != cp:				# Which means that it is time to flip over
 			self.currentPage = cp
 			self.__drawBackground()
 			self.__drawNaviBar(cp)
 
 		sru = (cp - 1) * self.MIOP
-		
 		if len(self.selections) - sru >= self.MIOP:
 			srd = sru + self.MIOP
 		else:
 			srd = len(self.selections)
-		
-
 		for i in range(sru, srd):
-			yaxis = i-(cp-1)*10-(cp-1)
 			if i == self.index:
-				lcd.rect(0,24+yaxis*16,308,16,lcd.MAGENTA,lcd.MAGENTA)
-				lcd.println(self.selections[i], color=lcd.BLACK)
+				lcd.println(self.selections[i], color=lcd.GREEN)
 			else:
-				lcd.rect(0,24+yaxis*16,308,16,lcd.WHITE,lcd.WHITE)
-				lcd.println(self.selections[i], color=lcd.BLACK)
+				lcd.println(self.selections[i], color=lcd.WHITE)
 
 	def refresh(self, newSelections):
 		buttonA.wasPressed(self.pressUp)
@@ -261,7 +235,7 @@ class FileList(Menu):
 			cache.Main().run()
 		else:
 			cache.main()
-		uos.remove(PATH_CACHE)
+		# uos.remove(PATH_CACHE)
 
 	def app_txtReader(self, fname):
 		lcd.clear()
