@@ -3,19 +3,34 @@ body,td,th {
 }
 
 .form_input {
-    width: 100%;
+    width: 60%;
+}
+
+.frame_left {
+	width: 20%;
+	height: 100%;
+	float:left;
+	/*overflow: auto;*/
+	background: #CCCCCC;
+}
+
+.frame_right {
+	width: 80%;
+	height: 100%;
+	float:left;
 }
 
 #log {
 	width: 100%;
-	height: 30%;
+	height: 100%;
 	overflow: auto;
-	background: #000000;
+	/*background: #000000;*/
 }
 
 .CodeMirror {
 	border-top: 1px solid black;
 	border-bottom: 1px solid black;
-	height: 60%;
+	width: 100%;
+	height: 100%;
 }
 }

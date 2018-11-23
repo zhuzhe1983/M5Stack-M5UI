@@ -74,12 +74,6 @@ class Framework:
 		else:
 			return 0
 
-	def ftpStatus(self):
-		if network.ftp.status()[0] != -1:
-			return True
-		else:
-			return False
-
 	def __th_statusMonitor(self):
 		ip = UIPainter()
 		if self.sdStatus():
@@ -91,8 +85,8 @@ class Framework:
 				ip.wifi(0, 2, 20, lcd.DARKGREY)
 			elif wifi == 2:
 				ip.wifi(0, 2, 20)
-			if self.ftpStatus():
-				ip.text(60, 5, 'FTP')
+			# if self.ftpStatus():
+			# 	ip.text(60, 5, 'FTP')
 			time.sleep(3)
 
 	def drawBanner(self):
@@ -109,14 +103,11 @@ class Framework:
 		lcd.text(135, 215, strB, lcd.WHITE)
 		lcd.text(240, 215, strC, lcd.WHITE)
 
-	def drawFileInfoBar(self):
-		lcd.line(0,185,308,185,lcd.LIGHTGREY)
-
 class Menu():
 	def __init__(self, selections):
 		self.selections = selections
 		self.index = 0					# Initial choice
-		self.MIOP = const(10)			# Max Index in One Page
+		self.MIOP = const(11)			# Max Index in One Page
 		self.currentPage = 1
 		self.upleft = (0, 24)
 		self.downright = (320, 204)
@@ -132,7 +123,7 @@ class Menu():
 		self.__guiUpdate()
 
 	def pressDown(self):
-		if self.index < len(self.selections) - 1:
+		if self.index < len(self.selections):
 			self.index += 1
 		else:
 			self.index = 0
@@ -146,60 +137,67 @@ class Menu():
 			lcd.WHITE,
 			lcd.WHITE)
 
-	def __drawNaviBarAndFileInfo(self, currentPage):
-		if self.root_current == '/':
-			ttf = len(self.selections)
-		else:
-			ttf = len(self.selections) - 1
+	def __drawNaviBar(self, currentPage):
 		h_bar = self.downright[1]-self.upleft[1] #204-24 = 180
-		ttp = int((len(self.selections)-1)/(self.MIOP)) + 1
-		h_lever = int(h_bar / ttp)
-		pagescounter = str(currentPage) + '/' + str(ttp) + 'pages'
-		pclen = lcd.textWidth(pagescounter)
-		filescounter = str(ttf) + 'files'
-		fclen = lcd.textWidth(filescounter)
+		h_lever = int(h_bar / int(len(self.selections) / self.MIOP + 1))
 		lcd.rect(308,
 			self.upleft[1],
 			self.downright[0]-self.upleft[0],
 			h_bar,
-			lcd.LIGHTGREY,
-			lcd.LIGHTGREY)
+			lcd.BLUE,
+			lcd.BLUE)
 		lcd.rect(308,
 			self.upleft[1] + h_lever * (currentPage-1),
 			self.downright[0]-self.upleft[0],
 			h_lever,
-			lcd.LIGHTGREY,
+			lcd.BLUE,
 			lcd.DARKGREY)
-		self.framework.drawFileInfoBar()
-		lcd.text(305-fclen,187,filescounter,lcd.BLUE)
-		lcd.text(290-fclen-pclen,187,pagescounter,lcd.BLUE)
-		lcd.setCursor(self.upleft[0]+1, self.upleft[1]+1)
 
+	def __drawNaviBarcp1(self):
+		h_bar = self.downright[1]-self.upleft[1] #204-24 = 180
+		lcd.rect(308,
+			self.upleft[1],
+			self.downright[0]-self.upleft[0],
+			h_bar,
+			lcd.BLUE,
+			lcd.BLUE)
+		lcd.rect(308,
+			24,
+			self.downright[0]-self.upleft[0],
+			170,
+			lcd.BLUE,
+			lcd.DARKGREY)
 
 	def __guiUpdate(self):
 		lcd.setCursor(self.upleft[0]+1, self.upleft[1]+1)
+
 		cp = int(self.index / self.MIOP) + 1	# Current page
-		if len(self.selections) <= self.MIOP:
-			self.__drawNaviBarAndFileInfo(1)
+
+		if len(self.selections) <= 11:
+			self.__drawNaviBarcp1()
 			cp = 1
+		
 		if self.currentPage != cp:				# Which means that it is time to flip over
 			self.currentPage = cp
 			self.__drawBackground()
-			self.__drawNaviBarAndFileInfo(cp)
+			self.__drawNaviBar(cp)
+
 		sru = (cp - 1) * self.MIOP
+		
 		if len(self.selections) - sru >= self.MIOP:
 			srd = sru + self.MIOP
 		else:
 			srd = len(self.selections)
+		
+
 		for i in range(sru, srd):
-			yaxis = 16*(i-(cp-1)*10)+25
+			yaxis = i-(cp-1)*10-(cp-1)
 			if i == self.index:
-				lcd.rect(0,yaxis,308,16,lcd.MAGENTA,lcd.MAGENTA)
+				lcd.rect(0,24+yaxis*16,308,16,lcd.MAGENTA,lcd.MAGENTA)
 				lcd.println(self.selections[i], color=lcd.BLACK)
 			else:
-				lcd.rect(0,yaxis,308,16,lcd.WHITE,lcd.WHITE)
+				lcd.rect(0,24+yaxis*16,308,16,lcd.WHITE,lcd.WHITE)
 				lcd.println(self.selections[i], color=lcd.BLACK)
-
 
 	def refresh(self, newSelections):
 		buttonA.wasPressed(self.pressUp)
@@ -209,10 +207,8 @@ class Menu():
 		self.index = 0
 		self.__drawBackground()
 		if len(self.selections) > self.MIOP:
-			self.__drawNaviBarAndFileInfo(1)
+			self.__drawNaviBar(1)
 		self.__guiUpdate()
-
-		
 
 class FileList(Menu):
 	def __init__(self, root):

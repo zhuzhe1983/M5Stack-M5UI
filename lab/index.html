@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="backend/codemirror.css">
   <link rel="stylesheet" href="./css/main.css"/>
 
-  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <script src="jquery.js"></script>
   <script src="backend/codemirror.js"></script>
   <script src="backend/matchbrackets.js"></script>
   <script src="backend/python.js"></script>
@@ -17,17 +17,28 @@
 </head>
 
 <body>
-  <div>
-    <input type="text" size="50" id="s_cmd">
-    <button id="btn_enter" title="Enter can work too">Enter</button>
-  </div>
-  <div id="log"></div>
-  <div>
-  	<article>
-    	<div><textarea id="code" name="code"></textarea></div>
-	</article>
 
-  </div>
+	<div name="main">
+		<div class="frame_left">
+			<div nowrap>
+				<input type="text" class="form_input" id="s_host">
+				<button id="btn_enter">Login</button>
+				<button id="btn_exit">Exit</button>
+			</div>
+			<div id="log"></div>
+		</div>
+
+		<div class="frame_right">
+			<div>
+				File name: <input type="text" class="form_input" id="s_fname">
+				<button id="btn_upload" title="Upload the code to device">Upload</button>
+			</div>
+			<article>
+				<div><textarea id="code" name="code"></textarea></div>
+			</article>
+		</div>
+	
+	</div>
 
 <script>
     var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
@@ -49,6 +60,6 @@
     });
 </script>
 <!-- <script src="js/base64.js"></script> -->
-<script src="hcq-core.js"></script>
+<script src="core.js"></script>
 </body>
 </html>
